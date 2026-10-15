@@ -139,3 +139,26 @@ def test_los_agentes_se_presentan_con_su_nombre():
     for nombre in ("Batuta", "Iris", "Euler", "Vera"):
         assert nombre in texto
     assert r["entrega_3_nota"].startswith(agentes.FIRMA_VERA)
+
+
+def test_registro_de_tokens_en_simulacion_queda_en_cero():
+    """La evidencia trae el registro de tokens por agente; en simulación nadie llama a Claude."""
+    r = pl.pipeline("AAPL", avisar=lambda t: None)
+    with open(r["archivo"], encoding="utf-8") as f:
+        registro = json.load(f)["registro_tokens"]
+    assert set(registro["por_agente"]) == {"Iris", "Euler", "Vera"}
+    assert registro["total"] == {"llamadas": 0, "entrada": 0, "salida": 0}
+
+
+def test_llamar_claude_anota_los_tokens_del_agente(monkeypatch):
+    """Un cliente falso reporta usage como la API real; el registro lo suma a Vera."""
+    from types import SimpleNamespace
+    respuesta = SimpleNamespace(content=[SimpleNamespace(type="text", text="hola")],
+                                usage=SimpleNamespace(input_tokens=12, output_tokens=5))
+    cliente = SimpleNamespace(messages=SimpleNamespace(create=lambda **kwargs: respuesta))
+    monkeypatch.setattr(agentes, "_cliente_claude", lambda: cliente)
+    agentes.reiniciar_tokens()
+    agentes.llamar_claude(agentes.PROMPT_COMUNICADOR, "{}")
+    resumen = agentes.resumen_tokens()
+    assert resumen["por_agente"]["Vera"] == {"llamadas": 1, "entrada": 12, "salida": 5}
+    assert resumen["total"]["entrada"] == 12

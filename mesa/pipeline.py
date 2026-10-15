@@ -7,7 +7,8 @@ import re
 from datetime import datetime, timezone
 
 from . import config
-from .agentes import agente_analista, agente_comunicador, agente_recolector
+from .agentes import (agente_analista, agente_comunicador, agente_recolector,
+                      reiniciar_tokens, resumen_tokens)
 
 PATRON_TICKER = re.compile(r"[A-Z0-9.\-]{1,12}")
 
@@ -28,6 +29,7 @@ def pipeline(ticker, avisar=print, guardar=True):
     """
     ticker = normalizar_ticker(ticker)
     modo = "SIMULACIÓN" if config.MODO_SIMULACION else "REAL"
+    reiniciar_tokens()                              # cada cadena lleva su propia cuenta
 
     avisar(f"🎼 Batuta · Orquestador\nRecibí tu orden. Inicio la cadena para {ticker} (modo {modo}).")
     avisar(f"🛰️ Iris · Recolectora buscando datos de {ticker}…")
@@ -53,6 +55,7 @@ def pipeline(ticker, avisar=print, guardar=True):
         "herramientas_mcp": herramientas,
         "entrega_2_analisis": analisis,
         "entrega_3_nota": nota,
+        "registro_tokens": resumen_tokens(),
     }
     if guardar:
         resultado["archivo"] = guardar_evidencia(resultado)

@@ -15,6 +15,33 @@ DESCARGO = "Nota educativa, no es recomendación de inversión."
 FIRMA_VERA = "✍️ Vera · Comunicadora"
 
 # ----------------------------------------------------------------------
+# Registro de tokens: cuánto lee (entrada) y escribe (salida) cada agente
+# ----------------------------------------------------------------------
+AGENTES = ("Iris", "Euler", "Vera")
+REGISTRO_TOKENS = []                               # una fila por llamada a Claude (nunca guarda llaves)
+
+
+def _agente_del_prompt(system):
+    """'Eres Iris, la Recolectora…' → 'Iris'."""
+    return next((nombre for nombre in AGENTES if system.startswith(f"Eres {nombre}")), "otro")
+
+
+def reiniciar_tokens():
+    REGISTRO_TOKENS.clear()
+
+
+def resumen_tokens():
+    """Suma los tokens por agente. En simulación no se llama a Claude: todo queda en 0."""
+    por_agente = {nombre: {"llamadas": 0, "entrada": 0, "salida": 0} for nombre in AGENTES}
+    for fila in REGISTRO_TOKENS:
+        suma = por_agente.setdefault(fila["agente"], {"llamadas": 0, "entrada": 0, "salida": 0})
+        suma["llamadas"] += 1
+        suma["entrada"] += fila["entrada"]
+        suma["salida"] += fila["salida"]
+    total = {k: sum(s[k] for s in por_agente.values()) for k in ("llamadas", "entrada", "salida")}
+    return {"modelo": config.MODELO, "por_agente": por_agente, "total": total}
+
+# ----------------------------------------------------------------------
 # Conexión con Claude (solo se usa fuera del modo simulación)
 # ----------------------------------------------------------------------
 _cliente = None
@@ -46,7 +73,11 @@ def llamar_claude(system, mensaje, usar_mcp=False, max_tokens=900):
         )
     else:
         respuesta = cliente.messages.create(**base)
-    texto = "".join(b.text for b in respuesta.content if b.type == "text").strip()
+    uso = getattr(respuesta, "usage", None)
+    REGISTRO_TOKENS.append({"agente": _agente_del_prompt(system),
+                            "entrada": getattr(uso, "input_tokens", 0) or 0,
+                            "salida": getattr(uso, "output_tokens", 0) or 0})
+    texto ="".join(b.text for b in respuesta.content if b.type == "text").strip()
     herramientas = [b.name for b in respuesta.content if b.type == "mcp_tool_use"]
     return texto, herramientas
 
