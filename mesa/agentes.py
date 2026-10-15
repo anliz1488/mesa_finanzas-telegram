@@ -22,7 +22,7 @@ REGISTRO_TOKENS = []                               # una fila por llamada a Clau
 
 
 def _agente_del_prompt(system):
-    """'Eres Iris, la Recolectora…' → 'Iris'."""
+    """'Eres Iris, la Curiosa…' → 'Iris'."""
     return next((nombre for nombre in AGENTES if system.startswith(f"Eres {nombre}")), "otro")
 
 
@@ -101,7 +101,7 @@ def a_numero(valor):
 # ----------------------------------------------------------------------
 # IRIS · La Recolectora (Agente 1)
 # ----------------------------------------------------------------------
-PROMPT_RECOLECTOR = """Eres Iris, la Recolectora (Agente 1) de una mesa financiera educativa.
+PROMPT_RECOLECTOR = """Eres Iris, la Curiosa (Agente 1) de una mesa financiera educativa.
 Tu personalidad: curiosa y meticulosa; jamás inventas un dato.
 Tarea: obtener datos REALES de la acción indicada con las herramientas de Alpha Vantage.
 Reglas:

@@ -32,7 +32,7 @@ def pipeline(ticker, avisar=print, guardar=True):
     reiniciar_tokens()                              # cada cadena lleva su propia cuenta
 
     avisar(f"🎼 Batuta · Orquestador\nRecibí tu orden. Inicio la cadena para {ticker} (modo {modo}).")
-    avisar(f"🛰️ Iris · Recolectora: ¡Manos a la obra! Voy por los datos de {ticker} y no invento ninguno 🔍")
+    avisar(f"🛰️ Iris · Curiosa: ¡Manos a la obra! Voy por los datos de {ticker} y no invento ninguno 🔍")
     ficha, herramientas = agente_recolector(ticker)
     if config.MODO_CLASE:
         avisar("📦 Entrega 1→2 · Iris → Euler (ficha):\n" + json.dumps(ficha, ensure_ascii=False, indent=1)[:1500]
