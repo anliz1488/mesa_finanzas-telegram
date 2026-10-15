@@ -21,6 +21,8 @@ def main():
         except Exception as error:
             errores += 1
             print(f"  Telegram                ❌ {error}")
+        if not config.TELEGRAM_CHAT_ID:
+            print("  Telegram                ⚠️ falta TELEGRAM_CHAT_ID: el bot no atenderá a nadie")
 
     if "--mcp" in sys.argv:
         if config.MODO_SIMULACION:

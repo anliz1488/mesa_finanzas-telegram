@@ -12,9 +12,17 @@ def _url(metodo):
     return f"https://api.telegram.org/bot{config.TELEGRAM_BOT_TOKEN}/{metodo}"
 
 
+def _pedir(verbo, metodo, **opciones):
+    """Llama a la Bot API. Si la red falla, el error nunca incluye la URL (que lleva el token)."""
+    try:
+        return requests.request(verbo, _url(metodo), **opciones)
+    except requests.RequestException as error:
+        raise requests.ConnectionError(f"Sin conexión con Telegram ({type(error).__name__})") from None
+
+
 def enviar(chat_id, texto):
-    respuesta = requests.post(_url("sendMessage"),
-                              data={"chat_id": chat_id, "text": texto[:LIMITE_MENSAJE]}, timeout=20)
+    respuesta = _pedir("POST", "sendMessage",
+                       data={"chat_id": chat_id, "text": texto[:LIMITE_MENSAJE]}, timeout=20)
     datos = respuesta.json()
     if not datos.get("ok"):
         raise RuntimeError(f"Telegram rechazó el mensaje: {datos.get('description')}")
@@ -23,7 +31,7 @@ def enviar(chat_id, texto):
 
 def verificar_bot():
     """Devuelve el @usuario del bot o lanza un error claro si el token es inválido."""
-    datos = requests.get(_url("getMe"), timeout=20).json()
+    datos = _pedir("GET", "getMe", timeout=20).json()
     if not datos.get("ok"):
         raise RuntimeError("Token de Telegram inválido. Revísalo con @BotFather.")
     return datos["result"]["username"]
@@ -31,7 +39,7 @@ def verificar_bot():
 
 def preparar_polling():
     """Quita un webhook previo; si existe, getUpdates no funciona."""
-    requests.get(_url("deleteWebhook"), timeout=20)
+    _pedir("GET", "deleteWebhook", timeout=20)
 
 
 def obtener_mensajes(offset=None, espera=0):
@@ -39,7 +47,7 @@ def obtener_mensajes(offset=None, espera=0):
     parametros = {"timeout": espera}
     if offset is not None:
         parametros["offset"] = offset
-    datos = requests.get(_url("getUpdates"), params=parametros, timeout=espera + 15).json()
+    datos = _pedir("GET", "getUpdates", params=parametros, timeout=espera + 15).json()
     if not datos.get("ok"):
         raise RuntimeError(f"getUpdates falló: {datos.get('description')}")
     return datos["result"]
@@ -51,5 +59,5 @@ def confirmar_leidos(ultimo_update_id):
 
 
 def chat_autorizado(chat_id):
-    """Si TELEGRAM_CHAT_ID está configurado, solo ese chat puede usar el bot."""
-    return not config.TELEGRAM_CHAT_ID or str(chat_id) == config.TELEGRAM_CHAT_ID
+    """Solo el chat de TELEGRAM_CHAT_ID puede usar el bot; si falta, nadie (cerrado por omisión)."""
+    return bool(config.TELEGRAM_CHAT_ID) and str(chat_id) == config.TELEGRAM_CHAT_ID

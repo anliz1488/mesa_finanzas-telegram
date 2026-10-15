@@ -162,3 +162,25 @@ def test_llamar_claude_anota_los_tokens_del_agente(monkeypatch):
     resumen = agentes.resumen_tokens()
     assert resumen["por_agente"]["Vera"] == {"llamadas": 1, "entrada": 12, "salida": 5}
     assert resumen["total"]["entrada"] == 12
+
+
+def test_error_de_red_no_muestra_el_token(monkeypatch):
+    """H-01: si Telegram no responde, el mensaje de error no debe incluir el token (va dentro de la URL)."""
+    import requests
+    from mesa import telegram_io
+    falso = "999999999:TOKEN_FALSO_DE_PRUEBA"
+    monkeypatch.setattr(config, "TELEGRAM_BOT_TOKEN", falso)
+
+    def red_caida(verbo, url, **opciones):
+        raise requests.ConnectionError(f"Max retries exceeded with url: {url}")
+    monkeypatch.setattr(telegram_io.requests, "request", red_caida)
+    with pytest.raises(requests.RequestException) as error:
+        telegram_io.verificar_bot()
+    assert falso not in str(error.value) and "Sin conexión con Telegram" in str(error.value)
+
+
+def test_sin_chat_id_el_bot_no_atiende_a_nadie(monkeypatch):
+    """H-02: cerrado por omisión; si falta TELEGRAM_CHAT_ID, ningún chat queda autorizado."""
+    from mesa import telegram_io
+    monkeypatch.setattr(config, "TELEGRAM_CHAT_ID", "")
+    assert telegram_io.chat_autorizado(123456) is False
